@@ -3,12 +3,13 @@ use crate::instructions::Instruction;
 use crate::registers::{WRegister, XRegister};
 use std::str::SplitAsciiWhitespace;
 
-pub enum Abs {
+#[derive(Debug, PartialEq)]
+pub enum AbsInstr {
     Wvariant { d: WRegister, n: WRegister },
     Xvariant { d: XRegister, n: XRegister },
 }
 
-impl Instruction for Abs {
+impl Instruction for AbsInstr {
     fn parse(text: &mut SplitAsciiWhitespace) -> Result<Self, ParseError> {
         let d = text
             .next()

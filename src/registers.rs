@@ -7,6 +7,7 @@ pub enum Width {
     X64,
 }
 
+#[derive(Debug, PartialEq)]
 pub struct WRegister(pub u8);
 
 impl FromStr for WRegister {
@@ -25,6 +26,7 @@ impl FromStr for WRegister {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub struct XRegister(pub u8);
 
 impl FromStr for XRegister {

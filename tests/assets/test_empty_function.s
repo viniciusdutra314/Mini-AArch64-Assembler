@@ -1,5 +1,5 @@
-.global absolute_value
-.type absolute_value,%function
+.global noop
+.type noop,%function
 
 noop:
     ret
