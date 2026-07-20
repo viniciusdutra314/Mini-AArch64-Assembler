@@ -28,6 +28,7 @@ impl fmt::Display for ParseError {
             Self::UnknownInstruction(instruction) => {
                 write!(f, "unknown instruction: {instruction}")
             }
+            Self::TooManyOperands => write!(f, "too many operands"),
         }
     }
 }

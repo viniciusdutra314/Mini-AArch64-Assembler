@@ -1,13 +1,9 @@
 use crate::errors::ParseError;
+use crate::instructions::Instruction;
 use crate::registers::{WRegister, XRegister};
 use std::str::SplitAsciiWhitespace;
 
-pub trait Instruction: Sized {
-    fn parse(text: &mut SplitAsciiWhitespace) -> Result<Self, ParseError>;
-    fn encode(&self) -> u32;
-}
-
-enum Abs {
+pub enum Abs {
     Wvariant { d: WRegister, n: WRegister },
     Xvariant { d: XRegister, n: XRegister },
 }
@@ -40,7 +36,6 @@ impl Instruction for Abs {
             Self::Wvariant { d, n } => (d.0, n.0, 0),
             Self::Xvariant { d, n } => (d.0, n.0, 1),
         };
-
-        (sf << 31) | (0b101101011000000001000 << 10) | (u32::from(d) << 5) | u32::from(n)
+        (sf << 31) | (0b101101011000000001000 << 10) | (u32::from(n) << 5) | u32::from(d)
     }
 }
