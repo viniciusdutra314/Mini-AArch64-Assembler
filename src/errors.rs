@@ -1,4 +1,4 @@
-use std::{error::Error, fmt, num::ParseIntError, string::FromUtf8Error};
+use std::{error::Error, fmt, io, num::ParseIntError, string::FromUtf8Error};
 
 #[derive(Debug)]
 pub enum ParseError {
@@ -9,6 +9,7 @@ pub enum ParseError {
     InvalidRegisterNumber(u8),
     MissingInstruction,
     MissingOperand(&'static str),
+    TooManyOperands,
     UnknownInstruction(String),
 }
 

@@ -1,8 +1,46 @@
+use std::str::FromStr;
+
 use crate::errors::ParseError;
 
 pub enum Width {
     W32,
     X64,
+}
+
+pub struct WRegister(pub u8);
+
+impl FromStr for WRegister {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (letter, number) = s.split_at(1);
+        if letter != "w" {
+            return Err(ParseError::InvalidRegister(s.to_owned()));
+        };
+        let number = number.parse::<u8>()?;
+        if number > 30 {
+            return Err(ParseError::InvalidRegisterNumber(number));
+        }
+        Ok(Self(number))
+    }
+}
+
+pub struct XRegister(pub u8);
+
+impl FromStr for XRegister {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (letter, number) = s.split_at(1);
+        if letter != "x" {
+            return Err(ParseError::InvalidRegister(s.to_owned()));
+        };
+        let number = number.parse::<u8>()?;
+        if number > 30 {
+            return Err(ParseError::InvalidRegisterNumber(number));
+        }
+        Ok(Self(number))
+    }
 }
 
 pub struct GeneralRegister {

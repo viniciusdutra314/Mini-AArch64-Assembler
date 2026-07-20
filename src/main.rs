@@ -2,12 +2,10 @@ use std::io::Read;
 
 pub mod errors;
 pub mod registers;
+pub mod instructions;
 use errors::ParseError;
 use registers::Register;
 
-enum Instruction {
-    ABS(Register, Register),
-}
 
 impl Instruction {
     pub fn parse<R: Read>(reader: &mut R) -> Result<Instruction, ParseError> {
@@ -22,19 +20,24 @@ impl Instruction {
         let instruction_name = parts.next().ok_or(ParseError::MissingInstruction)?;
 
         match instruction_name {
-            "abs" => {
-                let destination = parts
-                    .next()
-                    .ok_or(ParseError::MissingOperand("destination"))?
-                    .parse()?;
-                let source = parts
-                    .next()
-                    .ok_or(ParseError::MissingOperand("source"))?
-                    .parse()?;
-                Ok(Instruction::ABS(destination, source))
-            }
+            "abs" => Self::parse_abs(&mut parts),
             _ => Err(ParseError::UnknownInstruction(instruction_name.to_owned())),
         }
+    }
+
+    fn parse_abs<'a>(parts: &mut impl Iterator<Item = &'a str>) -> Result<Self, ParseError> {
+        let destination = parts
+            .next()
+            .ok_or(ParseError::MissingOperand("destination"))?
+            .parse()?;
+        let source = parts
+            .next()
+            .ok_or(ParseError::MissingOperand("source"))?
+            .parse()?;
+        if parts.next().is_some() {
+            return ParseError::MissingOperand(())
+        }
+        Ok(Self::ABS { d: destination, n: source })
     }
 }
 
