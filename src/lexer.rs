@@ -93,7 +93,11 @@ pub enum Token {
 }
 
 pub fn tokenize(source: &str) -> Result<Vec<Token>, ParseError> {
-    let source = source.replace(',', " , ");
+    let source = source
+        .split_once("//")
+        .map_or(source, |(code, _comment)| code)
+        .replace(',', " , ");
+
     let mut words = source
         .split_ascii_whitespace()
         .map(|w| w.to_ascii_lowercase());
@@ -136,6 +140,19 @@ mod tests {
         for source in ["neg x0,x1", "neg x0, x1", "neg x0 , x1"] {
             assert_eq!(tokenize(source).unwrap(), expected);
         }
+    }
+
+    #[test]
+    fn tokenize_ignore_comments() {
+        let expected = vec![
+            Token::Mnemonic(Mnemonic::Abs),
+            Token::Register(RegisterKind::X(XRegister(0))),
+            Token::Comma,
+            Token::Register(RegisterKind::X(XRegister(1))),
+        ];
+
+        assert_eq!(tokenize("abs x0,x1 //comment").unwrap(), expected);
+        assert_eq!(tokenize("abs x0,x1").unwrap(), expected);
     }
 
     #[test]
