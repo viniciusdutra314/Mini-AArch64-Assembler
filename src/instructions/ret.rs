@@ -1,6 +1,9 @@
 use crate::errors::ParseError;
-use crate::{instructions::Instruction, registers::XRegister};
-use std::str::SplitAsciiWhitespace;
+use crate::lexer::{Mnemonic, RegisterKind, Token};
+use crate::{
+    instructions::{Encode, ParseTokens},
+    registers::XRegister,
+};
 
 #[derive(Debug, PartialEq)]
 pub struct RetInstr {
@@ -15,12 +18,22 @@ impl Default for RetInstr {
     }
 }
 
-impl Instruction for RetInstr {
-    fn parse(text: &mut SplitAsciiWhitespace) -> Result<Self, ParseError> {
-        Ok(Self {
-            register: text.next().unwrap_or("x30").parse::<XRegister>()?,
-        })
+impl ParseTokens for RetInstr {
+    fn parse(tokens: &[Token]) -> Result<Self, ParseError> {
+        match tokens {
+            [Token::Mnemonic(Mnemonic::Ret)] => Ok(Self::default()),
+            [
+                Token::Mnemonic(Mnemonic::Ret),
+                Token::Register(RegisterKind::X(register)),
+            ] => Ok(Self {
+                register: *register,
+            }),
+            _ => Err(ParseError::InvalidSyntax),
+        }
     }
+}
+
+impl Encode for RetInstr {
     fn encode(&self) -> u32 {
         0u32 | 0b1101011001011111 << 15 | ((self.register.0 as u32) << 5)
     }

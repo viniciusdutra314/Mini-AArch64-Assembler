@@ -1,4 +1,7 @@
-use crate::{errors::ParseError, instructions::Instructions};
+use crate::{
+    errors::ParseError::{self, InvalidSyntax},
+    instructions::Instruction,
+};
 use std::{collections::HashMap, str::FromStr};
 
 #[derive(Debug, PartialEq)]
@@ -15,7 +18,7 @@ pub struct Symbol {
 
 #[derive(Debug, PartialEq)]
 pub struct AsmCode {
-    pub instructions: Vec<Instructions>,
+    pub instructions: Vec<Instruction>,
     pub labels: HashMap<String, Symbol>,
 }
 
@@ -23,39 +26,31 @@ impl FromStr for AsmCode {
     type Err = ParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut symbols = HashMap::<String, Symbol>::new();
-        let mut instructions = Vec::<Instructions>::new();
-        for line in s.lines().map(|l| l.trim()) {
-            if line.is_empty() {
-                continue;
-            }
-            if let Some(name) = line.strip_prefix(".global") {
-                symbols.entry(name.trim().to_owned()).or_default().is_global = true;
-                continue;
-            }
-            if let Some(type_def) = line.strip_prefix(".type") {
-                let (name, symbol_type) = type_def
-                    .trim()
-                    .split_once(',')
-                    .ok_or_else(|| ParseError::UnknownInstruction(line.to_owned()))?;
-
-                let kind = match symbol_type.trim() {
-                    "%function" => SymbolKind::Function,
-                    _ => return Err(ParseError::UnknownInstruction(line.to_owned())),
-                };
-
-                symbols.entry(name.trim().to_owned()).or_default().kind = Some(kind);
-                continue;
-            }
-
-            if let Some(name) = line.strip_suffix(":") {
+        let mut instructions = Vec::<Instruction>::new();
+        for line in s.lines().map(str::trim).filter(|l| !l.is_empty()) {
+            if line.starts_with('.') {
+                let directive_fields: Vec<_> = line
+                    .split(|c: char| c.is_ascii_whitespace() || c == ',')
+                    .filter(|field| !field.is_empty())
+                    .collect();
+                match directive_fields.as_slice() {
+                    [".global", name] => {
+                        symbols.entry((*name).to_owned()).or_default().is_global = true;
+                    }
+                    [".type", name, "%function"] => {
+                        symbols.entry((*name).to_owned()).or_default().kind =
+                            Some(SymbolKind::Function);
+                    }
+                    _ => return Err(InvalidSyntax),
+                }
+            } else if let Some(label) = line.strip_suffix(":") {
                 symbols
-                    .entry(name.to_owned())
+                    .entry(label.to_owned())
                     .or_default()
                     .instruction_index = Some(instructions.len());
-                continue;
+            } else {
+                instructions.push(line.parse::<Instruction>()?);
             }
-
-            instructions.push(line.parse::<Instructions>()?);
         }
         Ok(Self {
             instructions,

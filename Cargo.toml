@@ -5,3 +5,4 @@ edition = "2024"
 [lib]
 
 [dependencies]
+enum_dispatch = "0.3.13"

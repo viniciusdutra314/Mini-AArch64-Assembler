@@ -7,6 +7,7 @@ pub enum ParseError {
     InvalidNumber(ParseIntError),
     InvalidRegister(String),
     InvalidRegisterNumber(u8),
+    InvalidSyntax,
     MissingInstruction,
     MissingOperand(&'static str),
     TooManyOperands,
@@ -23,6 +24,7 @@ impl fmt::Display for ParseError {
             Self::InvalidRegisterNumber(number) => {
                 write!(f, "register number must be between 0 and 30, got {number}")
             }
+            Self::InvalidSyntax => write!(f, "invalid syntax"),
             Self::MissingInstruction => write!(f, "missing instruction"),
             Self::MissingOperand(operand) => write!(f, "missing {operand} operand"),
             Self::UnknownInstruction(instruction) => {

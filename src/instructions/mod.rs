@@ -1,34 +1,47 @@
 pub mod abs;
 pub mod ret;
+pub mod sub;
 
-use super::instructions::abs::*;
-use super::instructions::ret::*;
-
+use self::abs::AbsInstr;
+use self::ret::RetInstr;
+use self::sub::SubInstr;
 use crate::errors::ParseError;
+use crate::lexer::{Mnemonic, Token, tokenize};
+use enum_dispatch::enum_dispatch;
 use std::str::FromStr;
-use std::str::SplitAsciiWhitespace;
 
-pub trait Instruction: Sized {
-    fn parse(text: &mut SplitAsciiWhitespace) -> Result<Self, ParseError>;
+#[enum_dispatch]
+pub trait Encode {
     fn encode(&self) -> u32;
 }
 
+pub trait ParseTokens: Sized {
+    fn parse(tokens: &[Token]) -> Result<Self, ParseError>;
+}
+
+#[enum_dispatch(Encode)]
 #[derive(Debug, PartialEq)]
-pub enum Instructions {
+pub enum Instruction {
     Abs(AbsInstr),
+    Sub(SubInstr),
     Ret(RetInstr),
 }
 
-impl FromStr for Instructions {
+impl FromStr for Instruction {
     type Err = ParseError;
+    fn from_str(source: &str) -> Result<Self, Self::Err> {
+        let tokens = tokenize(source)?;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut words = s.split_ascii_whitespace();
-        let first = words.next().ok_or(ParseError::MissingInstruction)?;
-        match first {
-            "abs" => AbsInstr::parse(&mut words).map(|inst| Self::Abs(inst)),
-            "ret" => RetInstr::parse(&mut words).map(|inst| Self::Ret(inst)),
-            _ => Err(ParseError::UnknownInstruction(s.to_owned())),
+        match tokens.as_slice() {
+            [Token::Mnemonic(Mnemonic::Abs), ..] => AbsInstr::parse(&tokens).map(Into::into),
+            [Token::Mnemonic(Mnemonic::Sub | Mnemonic::Neg), ..] => {
+                SubInstr::parse(&tokens).map(Into::into)
+            }
+            [Token::Mnemonic(Mnemonic::Ret), ..] => RetInstr::parse(&tokens).map(Into::into),
+            [Token::Mnemonic(mnemonic), ..] => {
+                Err(ParseError::UnknownInstruction(mnemonic.to_string()))
+            }
+            _ => Err(ParseError::InvalidSyntax),
         }
     }
 }

@@ -1,7 +1,7 @@
 use crate::errors::ParseError;
-use crate::instructions::Instruction;
+use crate::instructions::{Encode, ParseTokens};
+use crate::lexer::{Mnemonic, RegisterKind, Token};
 use crate::registers::{WRegister, XRegister};
-use std::str::SplitAsciiWhitespace;
 
 #[derive(Debug, PartialEq)]
 pub enum AbsInstr {
@@ -9,29 +9,27 @@ pub enum AbsInstr {
     Xvariant { d: XRegister, n: XRegister },
 }
 
-impl Instruction for AbsInstr {
-    fn parse(text: &mut SplitAsciiWhitespace) -> Result<Self, ParseError> {
-        let d = text
-            .next()
-            .ok_or(ParseError::MissingOperand("destination"))?;
-        let n = text.next().ok_or(ParseError::MissingOperand("source"))?;
-        if text.next().is_some() {
-            return Err(ParseError::TooManyOperands);
-        }
-
-        match d.as_bytes().first() {
-            Some(b'w') => Ok(Self::Wvariant {
-                d: d.parse()?,
-                n: n.parse()?,
-            }),
-            Some(b'x') => Ok(Self::Xvariant {
-                d: d.parse()?,
-                n: n.parse()?,
-            }),
-            _ => Err(ParseError::InvalidRegister(d.to_owned())),
+impl ParseTokens for AbsInstr {
+    fn parse(tokens: &[Token]) -> Result<Self, ParseError> {
+        match tokens {
+            [
+                Token::Mnemonic(Mnemonic::Abs),
+                Token::Register(RegisterKind::W(d)),
+                Token::Comma,
+                Token::Register(RegisterKind::W(n)),
+            ] => Ok(Self::Wvariant { d: *d, n: *n }),
+            [
+                Token::Mnemonic(Mnemonic::Abs),
+                Token::Register(RegisterKind::X(d)),
+                Token::Comma,
+                Token::Register(RegisterKind::X(n)),
+            ] => Ok(Self::Xvariant { d: *d, n: *n }),
+            _ => Err(ParseError::InvalidSyntax),
         }
     }
+}
 
+impl Encode for AbsInstr {
     fn encode(&self) -> u32 {
         let (d, n, sf) = match self {
             Self::Wvariant { d, n } => (d.0, n.0, 0),

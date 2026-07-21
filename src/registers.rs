@@ -2,22 +2,35 @@ use std::str::FromStr;
 
 use crate::errors::ParseError;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WRegister(pub u8);
+
+impl WRegister {
+    pub const ZERO: Self = Self(31);
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct XRegister(pub u8);
+
+impl XRegister {
+    pub const ZERO: Self = Self(31);
+}
+
 pub enum Width {
     W32,
     X64,
 }
 
-#[derive(Debug, PartialEq)]
-pub struct WRegister(pub u8);
-
 impl FromStr for WRegister {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (letter, number) = s.split_at(1);
-        if letter != "w" {
-            return Err(ParseError::InvalidRegister(s.to_owned()));
-        };
+        if s == "wzr" {
+            return Ok(Self::ZERO);
+        }
+        let number = s
+            .strip_prefix('w')
+            .ok_or_else(|| ParseError::InvalidRegister(s.to_owned()))?;
         let number = number.parse::<u8>()?;
         if number > 30 {
             return Err(ParseError::InvalidRegisterNumber(number));
@@ -26,17 +39,16 @@ impl FromStr for WRegister {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub struct XRegister(pub u8);
-
 impl FromStr for XRegister {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (letter, number) = s.split_at(1);
-        if letter != "x" {
-            return Err(ParseError::InvalidRegister(s.to_owned()));
-        };
+        if s == "xzr" {
+            return Ok(Self::ZERO);
+        }
+        let number = s
+            .strip_prefix('x')
+            .ok_or_else(|| ParseError::InvalidRegister(s.to_owned()))?;
         let number = number.parse::<u8>()?;
         if number > 30 {
             return Err(ParseError::InvalidRegisterNumber(number));
