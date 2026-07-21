@@ -1,16 +1,17 @@
 use Mini_AArch64_Assembler::{
-    assembly_code::{AsmCode, Symbol, SymbolKind::Function},
-    instructions::{Encode, Instruction, ret::RetInstr},
+    assembly_code::{Code, Symbol, SymbolKind::Function},
+    instructions::{Encode, Instruction, ret::RetInstr, sub::SubInstr},
+    registers::{Shift, ShiftKind, XRegister},
 };
 use std::collections::HashMap;
 
 #[test]
 fn test_empty_function() {
     let code_str = include_str!("assets/test_empty_function.s");
-    let asm_code: AsmCode = code_str.parse().unwrap();
+    let asm_code: Code = code_str.parse().unwrap();
     assert_eq!(
         asm_code,
-        AsmCode {
+        Code {
             instructions: vec![Instruction::Ret(RetInstr::default())],
             labels: HashMap::from([(
                 "noop".to_owned(),
@@ -24,15 +25,27 @@ fn test_empty_function() {
     );
 }
 
-fn test_absolute_value(){
-    let code_str = include_str!("assets/test_empty_function.s");
-    let asm_code: AsmCode = code_str.parse().unwrap();
+#[test]
+fn test_negate_value_and_shift() {
+    let code_str = include_str!("assets/test_neg_function.s");
+    let asm_code: Code = code_str.parse().unwrap();
     assert_eq!(
         asm_code,
-        AsmCode {
-            instructions: vec![Instruction::Ret(RetInstr::default())],
+        Code {
+            instructions: vec![
+                Instruction::Sub(SubInstr::XVariant {
+                    d: XRegister(0),
+                    n: XRegister::ZERO,
+                    m: XRegister(0),
+                    shift: Some(Shift {
+                        kind: ShiftKind::Lsl,
+                        amount: 1,
+                    }),
+                }),
+                Instruction::Ret(RetInstr::default())
+            ],
             labels: HashMap::from([(
-                "noop".to_owned(),
+                "negate_val".to_owned(),
                 Symbol {
                     is_global: true,
                     kind: Some(Function),

@@ -1,5 +1,5 @@
 use crate::errors::ParseError;
-use crate::registers::{WRegister, XRegister};
+use crate::registers::{RegisterKind, ShiftKind};
 use std::{fmt, str::FromStr};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -64,26 +64,6 @@ impl fmt::Display for Mnemonic {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum RegisterKind {
-    W(WRegister),
-    X(XRegister),
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ShiftKind {
-    Lsl,
-    Lsr,
-    Asr,
-    Ror,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Shift {
-    pub kind: ShiftKind,
-    pub amount: u8,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
     Mnemonic(Mnemonic),
     Comma,
@@ -127,6 +107,7 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, ParseError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::registers::XRegister;
 
     #[test]
     fn tokenizes_common_comma_spacing() {

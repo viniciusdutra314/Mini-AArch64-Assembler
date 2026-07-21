@@ -1,8 +1,8 @@
 use crate::errors::ParseError;
-use crate::lexer::{Mnemonic, RegisterKind, Token};
+use crate::lexer::{Mnemonic, Token};
 use crate::{
     instructions::{Encode, ParseTokens},
-    registers::XRegister,
+    registers::{RegisterKind, XRegister},
 };
 
 #[derive(Debug, PartialEq)]

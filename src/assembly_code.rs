@@ -17,17 +17,25 @@ pub struct Symbol {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct AsmCode {
+pub struct Code {
     pub instructions: Vec<Instruction>,
     pub labels: HashMap<String, Symbol>,
 }
 
-impl FromStr for AsmCode {
+impl FromStr for Code {
     type Err = ParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut symbols = HashMap::<String, Symbol>::new();
         let mut instructions = Vec::<Instruction>::new();
-        for line in s.lines().map(str::trim).filter(|l| !l.is_empty()) {
+
+        for line in s.lines().filter_map(|line| {
+            let line = line
+                .split_once("//")
+                .map_or(line, |(code, _comment)| code)
+                .trim();
+
+            (!line.is_empty()).then_some(line)
+        }) {
             if line.starts_with('.') {
                 let directive_fields: Vec<_> = line
                     .split(|c: char| c.is_ascii_whitespace() || c == ',')

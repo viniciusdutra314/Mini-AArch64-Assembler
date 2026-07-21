@@ -2,6 +2,12 @@ use std::str::FromStr;
 
 use crate::errors::ParseError;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RegisterKind {
+    W(WRegister),
+    X(XRegister),
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct WRegister(pub u8);
 
@@ -14,6 +20,46 @@ pub struct XRegister(pub u8);
 
 impl XRegister {
     pub const ZERO: Self = Self(31);
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ShiftKind {
+    Lsl,
+    Lsr,
+    Asr,
+    Ror,
+}
+
+impl ShiftKind {
+    pub const fn bits(self) -> u32 {
+        match self {
+            Self::Lsl => 0b00,
+            Self::Lsr => 0b01,
+            Self::Asr => 0b10,
+            Self::Ror => 0b11,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Shift {
+    pub kind: ShiftKind,
+    pub amount: u8,
+}
+
+impl Shift {
+    pub fn from_immediate(kind: ShiftKind, immediate: &str) -> Result<Self, ParseError> {
+        let amount = immediate
+            .strip_prefix('#')
+            .ok_or(ParseError::InvalidSyntax)?
+            .parse()?;
+
+        Ok(Self { kind, amount })
+    }
+
+    pub const fn encoded_bits(self) -> u32 {
+        (self.kind.bits() << 22) | ((self.amount as u32) << 10)
+    }
 }
 
 pub enum Width {
@@ -54,40 +100,5 @@ impl FromStr for XRegister {
             return Err(ParseError::InvalidRegisterNumber(number));
         }
         Ok(Self(number))
-    }
-}
-
-pub struct GeneralRegister {
-    number: u8,
-    width: Width,
-}
-
-impl GeneralRegister {
-    pub fn new(number: u8, width: Width) -> Result<Self, ParseError> {
-        if number >= 31 {
-            return Err(ParseError::InvalidRegisterNumber(number));
-        }
-        Ok(Self { number, width })
-    }
-}
-
-pub enum Register {
-    General(GeneralRegister),
-    Special,
-}
-
-impl std::str::FromStr for Register {
-    type Err = ParseError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (width, number) = if let Some(number) = s.strip_prefix('x') {
-            (Width::X64, number)
-        } else if let Some(number) = s.strip_prefix('w') {
-            (Width::W32, number)
-        } else {
-            return Err(ParseError::InvalidRegister(s.to_owned()));
-        };
-
-        GeneralRegister::new(number.parse()?, width).map(Register::General)
     }
 }
