@@ -24,6 +24,25 @@ fn test_empty_function() {
     );
 }
 
+fn test_absolute_value(){
+    let code_str = include_str!("assets/test_empty_function.s");
+    let asm_code: AsmCode = code_str.parse().unwrap();
+    assert_eq!(
+        asm_code,
+        AsmCode {
+            instructions: vec![Instruction::Ret(RetInstr::default())],
+            labels: HashMap::from([(
+                "noop".to_owned(),
+                Symbol {
+                    is_global: true,
+                    kind: Some(Function),
+                    instruction_index: Some(0),
+                },
+            )]),
+        }
+    );
+}
+
 #[test]
 fn test_neg_alias_lowers_to_sub() {
     let alias: Instruction = "neg x0,x1".parse().unwrap();

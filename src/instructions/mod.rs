@@ -1,8 +1,6 @@
-pub mod abs;
 pub mod ret;
 pub mod sub;
 
-use self::abs::AbsInstr;
 use self::ret::RetInstr;
 use self::sub::SubInstr;
 use crate::errors::ParseError;
@@ -22,7 +20,6 @@ pub trait ParseTokens: Sized {
 #[enum_dispatch(Encode)]
 #[derive(Debug, PartialEq)]
 pub enum Instruction {
-    Abs(AbsInstr),
     Sub(SubInstr),
     Ret(RetInstr),
 }
@@ -33,7 +30,6 @@ impl FromStr for Instruction {
         let tokens = tokenize(source)?;
 
         match tokens.as_slice() {
-            [Token::Mnemonic(Mnemonic::Abs), ..] => AbsInstr::parse(&tokens).map(Into::into),
             [Token::Mnemonic(Mnemonic::Sub | Mnemonic::Neg), ..] => {
                 SubInstr::parse(&tokens).map(Into::into)
             }
