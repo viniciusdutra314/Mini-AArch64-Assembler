@@ -1,6 +1,6 @@
 use crate::errors::ParseError;
-use crate::instructions::{Encode, ParseTokens};
-use crate::lexer::{Mnemonic, Token};
+use crate::instructions::{Encode, InstructionStatement, Operand, ShiftOperand};
+use crate::lexer::Mnemonic;
 use crate::registers::{RegisterKind, Shift, Shift32, Shift64, ShiftKind, WRegister, XRegister};
 
 #[derive(Debug, PartialEq)]
@@ -17,60 +17,55 @@ pub enum SubInstr {
     X(SubOperands<XRegister, 63>),
 }
 
-impl ParseTokens for SubInstr {
-    fn parse(tokens: &[Token]) -> Result<Self, ParseError> {
-        let (d, n, m, shift) = match tokens {
-            [
-                Token::Mnemonic(Mnemonic::Sub),
-                Token::Register(d),
-                Token::Comma,
-                Token::Register(n),
-                Token::Comma,
-                Token::Register(m),
-            ] => (*d, *n, *m, None),
-            [
-                Token::Mnemonic(Mnemonic::Sub),
-                Token::Register(d),
-                Token::Comma,
-                Token::Register(n),
-                Token::Comma,
-                Token::Register(m),
-                Token::Comma,
-                Token::Shift(kind),
-                Token::Immediate(amount),
-            ] => (*d, *n, *m, Some((*kind, amount.as_str()))),
-            [
-                Token::Mnemonic(Mnemonic::Neg),
-                Token::Register(d),
-                Token::Comma,
-                Token::Register(m),
-            ] => (*d, d.zero(), *m, None),
-            [
-                Token::Mnemonic(Mnemonic::Neg),
-                Token::Register(d),
-                Token::Comma,
-                Token::Register(m),
-                Token::Comma,
-                Token::Shift(kind),
-                Token::Immediate(amount),
-            ] => (*d, d.zero(), *m, Some((*kind, amount.as_str()))),
+impl TryFrom<&InstructionStatement> for SubInstr {
+    type Error = ParseError;
+    fn try_from(statement: &InstructionStatement) -> Result<Self, Self::Error> {
+        let (d, n, m, shift) = match (statement.mnemonic, statement.operands.as_slice()) {
+            (
+                Mnemonic::Sub,
+                [
+                    Operand::Register(d),
+                    Operand::Register(n),
+                    Operand::Register(m),
+                ],
+            ) => (*d, *n, *m, None),
+            (
+                Mnemonic::Sub,
+                [
+                    Operand::Register(d),
+                    Operand::Register(n),
+                    Operand::Register(m),
+                    Operand::Shift(shift),
+                ],
+            ) => (*d, *n, *m, Some(*shift)),
+            (Mnemonic::Neg, [Operand::Register(d), Operand::Register(m)]) => {
+                (*d, d.zero(), *m, None)
+            }
+            (
+                Mnemonic::Neg,
+                [
+                    Operand::Register(d),
+                    Operand::Register(m),
+                    Operand::Shift(shift),
+                ],
+            ) => (*d, d.zero(), *m, Some(*shift)),
             _ => return Err(ParseError::InvalidSyntax),
         };
 
-        if shift.is_some_and(|(kind, _)| kind == ShiftKind::Ror) {
+        if shift.is_some_and(|shift| shift.kind == ShiftKind::Ror) {
             return Err(ParseError::InvalidSyntax);
         }
 
         match (d, n, m) {
             (RegisterKind::W(d), RegisterKind::W(n), RegisterKind::W(m)) => {
                 let shift = shift
-                    .map(|(kind, amount)| Shift32::from_immediate(kind, amount))
+                    .map(|ShiftOperand { kind, amount }| Shift32::new(kind, amount))
                     .transpose()?;
                 Ok(Self::W(SubOperands { d, n, m, shift }))
             }
             (RegisterKind::X(d), RegisterKind::X(n), RegisterKind::X(m)) => {
                 let shift = shift
-                    .map(|(kind, amount)| Shift64::from_immediate(kind, amount))
+                    .map(|ShiftOperand { kind, amount }| Shift64::new(kind, amount))
                     .transpose()?;
                 Ok(Self::X(SubOperands { d, n, m, shift }))
             }

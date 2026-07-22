@@ -1,7 +1,7 @@
 use crate::errors::ParseError;
-use crate::lexer::{Mnemonic, Token};
 use crate::{
-    instructions::{Encode, ParseTokens},
+    instructions::{Encode, InstructionStatement, Operand},
+    lexer::Mnemonic,
     registers::{RegisterKind, XRegister},
 };
 
@@ -18,14 +18,13 @@ impl Default for RetInstr {
     }
 }
 
-impl ParseTokens for RetInstr {
-    fn parse(tokens: &[Token]) -> Result<Self, ParseError> {
-        match tokens {
-            [Token::Mnemonic(Mnemonic::Ret)] => Ok(Self::default()),
-            [
-                Token::Mnemonic(Mnemonic::Ret),
-                Token::Register(RegisterKind::X(register)),
-            ] => Ok(Self {
+impl TryFrom<&InstructionStatement> for RetInstr {
+    type Error = ParseError;
+
+    fn try_from(statement: &InstructionStatement) -> Result<Self, Self::Error> {
+        match (statement.mnemonic, statement.operands.as_slice()) {
+            (Mnemonic::Ret, []) => Ok(Self::default()),
+            (Mnemonic::Ret, [Operand::Register(RegisterKind::X(register))]) => Ok(Self {
                 register: *register,
             }),
             _ => Err(ParseError::InvalidSyntax),
