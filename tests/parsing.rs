@@ -1,7 +1,11 @@
 use Mini_AArch64_Assembler::{
     assembly_code::{Code, Symbol, SymbolKind::Function},
-    instructions::{Encode, Instruction, ret::RetInstr, sub::SubInstr},
-    registers::{Shift, ShiftKind, XRegister},
+    instructions::{
+        Encode, Instruction,
+        ret::RetInstr,
+        sub::{SubInstr, SubOperands},
+    },
+    registers::{Shift64, ShiftKind, XRegister},
 };
 use std::collections::HashMap;
 
@@ -33,15 +37,12 @@ fn test_negate_value_and_shift() {
         asm_code,
         Code {
             instructions: vec![
-                Instruction::Sub(SubInstr::XVariant {
+                Instruction::Sub(SubInstr::X(SubOperands {
                     d: XRegister(0),
                     n: XRegister::ZERO,
                     m: XRegister(0),
-                    shift: Some(Shift {
-                        kind: ShiftKind::Lsl,
-                        amount: 1,
-                    }),
-                }),
+                    shift: Some(Shift64::new(ShiftKind::Lsl, 1).unwrap()),
+                })),
                 Instruction::Ret(RetInstr::default())
             ],
             labels: HashMap::from([(
@@ -68,6 +69,13 @@ fn test_shifted_neg_alias_lowers_to_sub() {
     let alias: Instruction = "neg w2, w3, asr #7".parse().unwrap();
     let canonical: Instruction = "sub w2,wzr,w3,asr #7".parse().unwrap();
     assert_eq!(alias, canonical);
+}
+
+#[test]
+fn test_rejects_shift_amount_outside_typed_limit() {
+    assert!("sub w0,w1,w2,lsl #32".parse::<Instruction>().is_err());
+    assert!("sub x0,x1,x2,lsl #32".parse::<Instruction>().is_ok());
+    assert!("sub x0,x1,x2,lsl #64".parse::<Instruction>().is_err());
 }
 
 #[test]

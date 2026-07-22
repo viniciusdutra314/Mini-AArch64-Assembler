@@ -1,158 +1,102 @@
 use crate::errors::ParseError;
 use crate::instructions::{Encode, ParseTokens};
 use crate::lexer::{Mnemonic, Token};
-use crate::registers::{RegisterKind, Shift, ShiftKind, WRegister, XRegister};
+use crate::registers::{RegisterKind, Shift, Shift32, Shift64, ShiftKind, WRegister, XRegister};
+
+#[derive(Debug, PartialEq)]
+pub struct SubOperands<R, const MAX_SHIFT: u8> {
+    pub d: R,
+    pub n: R,
+    pub m: R,
+    pub shift: Option<Shift<MAX_SHIFT>>,
+}
 
 #[derive(Debug, PartialEq)]
 pub enum SubInstr {
-    WVariant {
-        d: WRegister,
-        n: WRegister,
-        m: WRegister,
-        shift: Option<Shift>,
-    },
-    XVariant {
-        d: XRegister,
-        n: XRegister,
-        m: XRegister,
-        shift: Option<Shift>,
-    },
+    W(SubOperands<WRegister, 31>),
+    X(SubOperands<XRegister, 63>),
 }
 
 impl ParseTokens for SubInstr {
     fn parse(tokens: &[Token]) -> Result<Self, ParseError> {
-        let instruction = match tokens {
+        let (d, n, m, shift) = match tokens {
             [
                 Token::Mnemonic(Mnemonic::Sub),
-                Token::Register(RegisterKind::W(d)),
+                Token::Register(d),
                 Token::Comma,
-                Token::Register(RegisterKind::W(n)),
+                Token::Register(n),
                 Token::Comma,
-                Token::Register(RegisterKind::W(m)),
-            ] => Ok(Self::WVariant {
-                d: *d,
-                n: *n,
-                m: *m,
-                shift: None,
-            }),
+                Token::Register(m),
+            ] => (*d, *n, *m, None),
             [
                 Token::Mnemonic(Mnemonic::Sub),
-                Token::Register(RegisterKind::W(d)),
+                Token::Register(d),
                 Token::Comma,
-                Token::Register(RegisterKind::W(n)),
+                Token::Register(n),
                 Token::Comma,
-                Token::Register(RegisterKind::W(m)),
+                Token::Register(m),
                 Token::Comma,
                 Token::Shift(kind),
                 Token::Immediate(amount),
-            ] => Ok(Self::WVariant {
-                d: *d,
-                n: *n,
-                m: *m,
-                shift: Some(Shift::from_immediate(*kind, amount)?),
-            }),
+            ] => (*d, *n, *m, Some((*kind, amount.as_str()))),
             [
-                Token::Mnemonic(Mnemonic::Sub),
-                Token::Register(RegisterKind::X(d)),
+                Token::Mnemonic(Mnemonic::Neg),
+                Token::Register(d),
                 Token::Comma,
-                Token::Register(RegisterKind::X(n)),
-                Token::Comma,
-                Token::Register(RegisterKind::X(m)),
-            ] => Ok(Self::XVariant {
-                d: *d,
-                n: *n,
-                m: *m,
-                shift: None,
-            }),
+                Token::Register(m),
+            ] => (*d, d.zero(), *m, None),
             [
-                Token::Mnemonic(Mnemonic::Sub),
-                Token::Register(RegisterKind::X(d)),
+                Token::Mnemonic(Mnemonic::Neg),
+                Token::Register(d),
                 Token::Comma,
-                Token::Register(RegisterKind::X(n)),
-                Token::Comma,
-                Token::Register(RegisterKind::X(m)),
+                Token::Register(m),
                 Token::Comma,
                 Token::Shift(kind),
                 Token::Immediate(amount),
-            ] => Ok(Self::XVariant {
-                d: *d,
-                n: *n,
-                m: *m,
-                shift: Some(Shift::from_immediate(*kind, amount)?),
-            }),
-            [
-                Token::Mnemonic(Mnemonic::Neg),
-                Token::Register(RegisterKind::W(d)),
-                Token::Comma,
-                Token::Register(RegisterKind::W(m)),
-            ] => Ok(Self::WVariant {
-                d: *d,
-                n: WRegister::ZERO,
-                m: *m,
-                shift: None,
-            }),
-            [
-                Token::Mnemonic(Mnemonic::Neg),
-                Token::Register(RegisterKind::W(d)),
-                Token::Comma,
-                Token::Register(RegisterKind::W(m)),
-                Token::Comma,
-                Token::Shift(kind),
-                Token::Immediate(amount),
-            ] => Ok(Self::WVariant {
-                d: *d,
-                n: WRegister::ZERO,
-                m: *m,
-                shift: Some(Shift::from_immediate(*kind, amount)?),
-            }),
-            [
-                Token::Mnemonic(Mnemonic::Neg),
-                Token::Register(RegisterKind::X(d)),
-                Token::Comma,
-                Token::Register(RegisterKind::X(m)),
-            ] => Ok(Self::XVariant {
-                d: *d,
-                n: XRegister::ZERO,
-                m: *m,
-                shift: None,
-            }),
-            [
-                Token::Mnemonic(Mnemonic::Neg),
-                Token::Register(RegisterKind::X(d)),
-                Token::Comma,
-                Token::Register(RegisterKind::X(m)),
-                Token::Comma,
-                Token::Shift(kind),
-                Token::Immediate(amount),
-            ] => Ok(Self::XVariant {
-                d: *d,
-                n: XRegister::ZERO,
-                m: *m,
-                shift: Some(Shift::from_immediate(*kind, amount)?),
-            }),
-            _ => Err(ParseError::InvalidSyntax),
-        }?;
-
-        let (shift, maximum) = match &instruction {
-            Self::WVariant { shift, .. } => (shift, 31),
-            Self::XVariant { shift, .. } => (shift, 63),
+            ] => (*d, d.zero(), *m, Some((*kind, amount.as_str()))),
+            _ => return Err(ParseError::InvalidSyntax),
         };
 
-        if shift.is_some_and(|shift| shift.kind == ShiftKind::Ror || shift.amount > maximum) {
+        if shift.is_some_and(|(kind, _)| kind == ShiftKind::Ror) {
             return Err(ParseError::InvalidSyntax);
         }
 
-        Ok(instruction)
+        match (d, n, m) {
+            (RegisterKind::W(d), RegisterKind::W(n), RegisterKind::W(m)) => {
+                let shift = shift
+                    .map(|(kind, amount)| Shift32::from_immediate(kind, amount))
+                    .transpose()?;
+                Ok(Self::W(SubOperands { d, n, m, shift }))
+            }
+            (RegisterKind::X(d), RegisterKind::X(n), RegisterKind::X(m)) => {
+                let shift = shift
+                    .map(|(kind, amount)| Shift64::from_immediate(kind, amount))
+                    .transpose()?;
+                Ok(Self::X(SubOperands { d, n, m, shift }))
+            }
+            _ => Err(ParseError::InvalidSyntax),
+        }
     }
 }
 
 impl Encode for SubInstr {
     fn encode(&self) -> u32 {
-        let (base, d, n, m, shift) = match self {
-            Self::WVariant { d, n, m, shift } => (0x4b00_0000, d.0, n.0, m.0, shift),
-            Self::XVariant { d, n, m, shift } => (0xcb00_0000, d.0, n.0, m.0, shift),
+        let (base, d, n, m, shift_bits) = match self {
+            Self::W(instruction) => (
+                0x4b00_0000,
+                instruction.d.0,
+                instruction.n.0,
+                instruction.m.0,
+                instruction.shift.map_or(0, Shift32::encoded_bits),
+            ),
+            Self::X(instruction) => (
+                0xcb00_0000,
+                instruction.d.0,
+                instruction.n.0,
+                instruction.m.0,
+                instruction.shift.map_or(0, Shift64::encoded_bits),
+            ),
         };
-        let shift_bits = shift.map_or(0, |shift| shift.encoded_bits());
 
         base | shift_bits | (u32::from(m) << 16) | (u32::from(n) << 5) | u32::from(d)
     }
