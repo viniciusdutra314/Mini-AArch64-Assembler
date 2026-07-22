@@ -112,6 +112,7 @@ impl FromStr for Instruction {
 mod tests {
     use super::*;
     use crate::registers::XRegister;
+    use arbitrary_int::u5;
 
     #[test]
     fn parses_tokens_into_an_instruction_statement() {
@@ -122,9 +123,9 @@ mod tests {
             InstructionStatement {
                 mnemonic: Mnemonic::Sub,
                 operands: vec![
-                    Operand::Register(RegisterKind::X(XRegister(0))),
-                    Operand::Register(RegisterKind::X(XRegister(1))),
-                    Operand::Register(RegisterKind::X(XRegister(2))),
+                    Operand::Register(RegisterKind::X(XRegister(u5::new(0)))),
+                    Operand::Register(RegisterKind::X(XRegister(u5::new(1)))),
+                    Operand::Register(RegisterKind::X(XRegister(u5::new(2)))),
                     Operand::Shift(ShiftOperand {
                         kind: ShiftKind::Lsl,
                         amount: 3,

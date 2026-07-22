@@ -4,6 +4,7 @@ use crate::{
     lexer::Mnemonic,
     registers::{RegisterKind, XRegister},
 };
+use arbitrary_int::u5;
 
 #[derive(Debug, PartialEq)]
 pub struct RetInstr {
@@ -13,7 +14,7 @@ pub struct RetInstr {
 impl Default for RetInstr {
     fn default() -> Self {
         Self {
-            register: XRegister(30),
+            register: XRegister(u5::new(30)),
         }
     }
 }
@@ -34,6 +35,6 @@ impl TryFrom<&InstructionStatement> for RetInstr {
 
 impl Encode for RetInstr {
     fn encode(&self) -> u32 {
-        0u32 | 0b1101011001011111 << 15 | ((self.register.0 as u32) << 5)
+        0u32 | 0b1101011001011111 << 15 | (u32::from(self.register.0.value()) << 5)
     }
 }

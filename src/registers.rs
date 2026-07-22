@@ -1,5 +1,7 @@
 use std::str::FromStr;
 
+use arbitrary_int::{u2, u5, u6};
+
 use crate::errors::ParseError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -9,7 +11,7 @@ pub enum RegisterKind {
 }
 
 impl RegisterKind {
-    pub const fn number(&self) -> u8 {
+    pub const fn number(&self) -> u5 {
         match self {
             Self::W(register) => register.0,
             Self::X(register) => register.0,
@@ -42,17 +44,17 @@ impl RegisterKind {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct WRegister(pub u8);
+pub struct WRegister(pub u5);
 
 impl WRegister {
-    pub const ZERO: Self = Self(31);
+    pub const ZERO: Self = Self(u5::new(31));
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct XRegister(pub u8);
+pub struct XRegister(pub u5);
 
 impl XRegister {
-    pub const ZERO: Self = Self(31);
+    pub const ZERO: Self = Self(u5::new(31));
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -64,20 +66,20 @@ pub enum ShiftKind {
 }
 
 impl ShiftKind {
-    pub const fn bits(self) -> u32 {
-        match self {
+    pub const fn bits(self) -> u2 {
+        u2::new(match self {
             Self::Lsl => 0b00,
             Self::Lsr => 0b01,
             Self::Asr => 0b10,
             Self::Ror => 0b11,
-        }
+        })
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Shift<const MAX_AMOUNT: u8> {
     kind: ShiftKind,
-    amount: u8,
+    amount: u6,
 }
 
 impl<const MAX_AMOUNT: u8> Shift<MAX_AMOUNT> {
@@ -86,6 +88,7 @@ impl<const MAX_AMOUNT: u8> Shift<MAX_AMOUNT> {
             return Err(ParseError::InvalidSyntax);
         }
 
+        let amount = u6::try_new(amount).map_err(|_| ParseError::InvalidSyntax)?;
         Ok(Self { kind, amount })
     }
 
@@ -102,12 +105,12 @@ impl<const MAX_AMOUNT: u8> Shift<MAX_AMOUNT> {
         self.kind
     }
 
-    pub const fn amount(self) -> u8 {
+    pub const fn amount(self) -> u6 {
         self.amount
     }
 
     pub const fn encoded_bits(self) -> u32 {
-        (self.kind.bits() << 22) | ((self.amount as u32) << 10)
+        ((self.kind.bits().value() as u32) << 22) | ((self.amount.value() as u32) << 10)
     }
 }
 
@@ -144,7 +147,7 @@ impl FromStr for WRegister {
         if number > 30 {
             return Err(ParseError::InvalidRegisterNumber(number));
         }
-        Ok(Self(number))
+        Ok(Self(u5::new(number)))
     }
 }
 
@@ -162,6 +165,6 @@ impl FromStr for XRegister {
         if number > 30 {
             return Err(ParseError::InvalidRegisterNumber(number));
         }
-        Ok(Self(number))
+        Ok(Self(u5::new(number)))
     }
 }

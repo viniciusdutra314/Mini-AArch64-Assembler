@@ -108,14 +108,15 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, ParseError> {
 mod tests {
     use super::*;
     use crate::registers::XRegister;
+    use arbitrary_int::u5;
 
     #[test]
     fn tokenizes_common_comma_spacing() {
         let expected = vec![
             Token::Mnemonic(Mnemonic::Neg),
-            Token::Register(RegisterKind::X(XRegister(0))),
+            Token::Register(RegisterKind::X(XRegister(u5::new(0)))),
             Token::Comma,
-            Token::Register(RegisterKind::X(XRegister(1))),
+            Token::Register(RegisterKind::X(XRegister(u5::new(1)))),
         ];
 
         for source in ["neg x0,x1", "neg x0, x1", "neg x0 , x1"] {
@@ -127,9 +128,9 @@ mod tests {
     fn tokenize_ignore_comments() {
         let expected = vec![
             Token::Mnemonic(Mnemonic::Abs),
-            Token::Register(RegisterKind::X(XRegister(0))),
+            Token::Register(RegisterKind::X(XRegister(u5::new(0)))),
             Token::Comma,
-            Token::Register(RegisterKind::X(XRegister(1))),
+            Token::Register(RegisterKind::X(XRegister(u5::new(1)))),
         ];
 
         assert_eq!(tokenize("abs x0,x1 //comment").unwrap(), expected);

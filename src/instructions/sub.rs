@@ -93,6 +93,9 @@ impl Encode for SubInstr {
             ),
         };
 
-        base | shift_bits | (u32::from(m) << 16) | (u32::from(n) << 5) | u32::from(d)
+        base | shift_bits
+            | (u32::from(m.value()) << 16)
+            | (u32::from(n.value()) << 5)
+            | u32::from(d.value())
     }
 }

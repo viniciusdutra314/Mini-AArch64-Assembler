@@ -7,6 +7,7 @@ use Mini_AArch64_Assembler::{
     },
     registers::{Shift64, ShiftKind, XRegister},
 };
+use arbitrary_int::u5;
 use std::collections::HashMap;
 
 #[test]
@@ -38,9 +39,9 @@ fn test_negate_value_and_shift() {
         Code {
             instructions: vec![
                 Instruction::Sub(SubInstr::X(SubOperands {
-                    d: XRegister(0),
+                    d: XRegister(u5::new(0)),
                     n: XRegister::ZERO,
-                    m: XRegister(0),
+                    m: XRegister(u5::new(0)),
                     shift: Some(Shift64::new(ShiftKind::Lsl, 1).unwrap()),
                 })),
                 Instruction::Ret(RetInstr::default())
